@@ -1,0 +1,8 @@
+{
+  "name": "のんべえ健康管理",
+  "description": "飲酒量とお酒代、体重、血液検査結果を記録して健康管理と節約をサポートするアプリです。",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
