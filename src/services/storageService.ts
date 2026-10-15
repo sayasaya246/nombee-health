@@ -35,12 +35,15 @@ export const storageService = {
       const response = await fetch(GAS_URL);
       if (!response.ok) throw new Error('Network response was not ok');
       const data = await response.json();
+      // Sheets returns rows in insertion order, but the UI assumes newest-first (e.g. weightRecords[0] is "latest")
+      const byDateDesc = <T extends { date: string }>(rows: T[] = []) =>
+        [...rows].sort((a, b) => b.date.localeCompare(a.date));
       return {
         ...DEFAULT_DATA,
         ...data,
-        alcoholRecords: data.alcoholRecords || [],
-        weightRecords: data.weightRecords || [],
-        bloodTestRecords: data.bloodTestRecords || [],
+        alcoholRecords: byDateDesc(data.alcoholRecords),
+        weightRecords: byDateDesc(data.weightRecords),
+        bloodTestRecords: byDateDesc(data.bloodTestRecords),
       };
     } catch (e) {
       console.error('Failed to fetch from GAS', e);

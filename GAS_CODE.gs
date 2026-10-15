@@ -5,6 +5,11 @@ function doGet() {
   const weightSheet = ss.getSheetByName('weight') || ss.insertSheet('weight');
   const bloodSheet = ss.getSheetByName('blood') || ss.insertSheet('blood');
 
+  // Sheets auto-converts "YYYY-MM-DD" strings into Date cells; normalize back to "YYYY-MM-DD"
+  // in the spreadsheet's timezone so the client-side date comparisons match.
+  const tz = ss.getSpreadsheetTimeZone();
+  const toDateStr = v => (v instanceof Date ? Utilities.formatDate(v, tz, 'yyyy-MM-dd') : String(v));
+
   // Load Settings
   const settingsData = settingsSheet.getDataRange().getValues();
   let settings = { name: 'ゲスト', dailyGoalDrinks: 2 };
@@ -19,7 +24,7 @@ function doGet() {
   const alcoholData = alcoholSheet.getDataRange().getValues();
   const alcoholRecords = alcoholData.slice(1).map(row => ({
     id: row[0],
-    date: row[1],
+    date: toDateStr(row[1]),
     name: row[2],
     volume: Number(row[3]),
     abv: Number(row[4]),
@@ -31,7 +36,7 @@ function doGet() {
   const weightData = weightSheet.getDataRange().getValues();
   const weightRecords = weightData.slice(1).map(row => ({
     id: row[0],
-    date: row[1],
+    date: toDateStr(row[1]),
     weight: Number(row[2])
   }));
 
@@ -39,7 +44,7 @@ function doGet() {
   const bloodData = bloodSheet.getDataRange().getValues();
   const bloodTestRecords = bloodData.slice(1).map(row => ({
     id: row[0],
-    date: row[1],
+    date: toDateStr(row[1]),
     gammaGTP: Number(row[2]),
     ast: Number(row[3]),
     alt: Number(row[4]),

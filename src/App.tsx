@@ -40,6 +40,21 @@ const getMonthYear = (dateStr: string) => {
   return `${d.getFullYear()}/${d.getMonth() + 1}`;
 };
 
+// Unified row for the full history view (all record types in one list)
+type HistoryItem = {
+  kind: 'alcohol' | 'weight' | 'blood';
+  id: string;
+  date: string;
+  title: string;
+  detail: string;
+};
+
+const HISTORY_ICON: Record<HistoryItem['kind'], string> = {
+  alcohol: '🍺',
+  weight: '⚖️',
+  blood: '🩸',
+};
+
 export default function App() {
   const [data, setData] = useState<AppData>({
     settings: { name: '...', dailyGoalDrinks: 2 },
@@ -193,6 +208,31 @@ export default function App() {
     setShowSettings(false);
   };
 
+  // All records merged and sorted newest-first (YYYY-MM-DD compares correctly as a string)
+  const allHistory = useMemo<HistoryItem[]>(() => [
+    ...data.alcoholRecords.map(r => ({
+      kind: 'alcohol' as const,
+      id: r.id,
+      date: r.date,
+      title: r.name,
+      detail: `${r.drinks.toFixed(1)} Unit / ¥${r.price.toLocaleString()}`,
+    })),
+    ...data.weightRecords.map(r => ({
+      kind: 'weight' as const,
+      id: r.id,
+      date: r.date,
+      title: '体重',
+      detail: `${r.weight} kg`,
+    })),
+    ...data.bloodTestRecords.map(r => ({
+      kind: 'blood' as const,
+      id: r.id,
+      date: r.date,
+      title: '血液検査',
+      detail: `γ-GTP ${r.gammaGTP} / AST ${r.ast} / ALT ${r.alt} / 中性脂肪 ${r.triglycerides}`,
+    })),
+  ].sort((a, b) => b.date.localeCompare(a.date)), [data]);
+
   const isOverGoal = stats.todayDrinks > data.settings.dailyGoalDrinks;
 
   return (
@@ -228,6 +268,38 @@ export default function App() {
 
       <main className="max-w-md mx-auto p-4 pt-6 space-y-6">
         
+        {activeTab === 'history' ? (
+          <section className="space-y-4">
+            <div className="flex items-center justify-between px-1">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">すべての履歴</p>
+              <button onClick={() => setActiveTab('input')} className="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:underline">
+                ← ホーム
+              </button>
+            </div>
+
+            <div className="bg-white rounded-[32px] p-6 border border-slate-200 shadow-sm space-y-3">
+              {allHistory.length === 0 ? (
+                <div className="py-12 text-center text-slate-300 italic text-sm">履歴がありません</div>
+              ) : (
+                allHistory.map(item => (
+                  <div key={`${item.kind}-${item.id}`} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
+                    <div className="flex items-center gap-4 min-w-0">
+                      <div className="w-10 h-10 shrink-0 bg-white rounded-xl flex items-center justify-center text-lg shadow-sm">{HISTORY_ICON[item.kind]}</div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-black text-slate-800 truncate">{item.title}</p>
+                        <p className="text-[10px] font-bold text-slate-400 tracking-tight">{item.date.replace(/-/g, '/')}</p>
+                        <p className="text-[10px] font-bold text-slate-500 tracking-tight truncate">{item.detail}</p>
+                      </div>
+                    </div>
+                    <button onClick={() => handleDelete(item.kind, item.id)} className="p-2 shrink-0 text-slate-300 hover:text-rose-400 transition-colors" aria-label="削除">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
+        ) : (<>
         {/* Dashboard Section (Bento Tiles) */}
         <section className="space-y-4">
           <div className="flex items-center justify-between px-1">
@@ -540,6 +612,7 @@ export default function App() {
             )}
           </div>
         </section>
+        </>)}
       </main>
 
       {/* Footer Nav Bar */}
