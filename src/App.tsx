@@ -55,6 +55,57 @@ const HISTORY_ICON: Record<HistoryItem['kind'], string> = {
   blood: '🩸',
 };
 
+// Minimal inline-SVG line chart (no chart library). `points` must be oldest-first.
+const TrendChart = ({ title, unit, points, threshold }: {
+  title: string;
+  unit: string;
+  points: { date: string; value: number }[];
+  threshold?: number;
+}) => {
+  if (points.length < 2) {
+    return (
+      <div className="p-4 bg-slate-50 rounded-2xl text-[10px] font-bold text-slate-400">
+        {title}: 2件以上の記録で推移を表示します
+      </div>
+    );
+  }
+
+  const W = 300, H = 90, P = 8;
+  const values = points.map(p => p.value);
+  const min = Math.min(...values, threshold ?? Infinity);
+  const max = Math.max(...values, threshold ?? -Infinity);
+  const span = max - min || 1;
+  const x = (i: number) => P + (i * (W - 2 * P)) / (points.length - 1);
+  const y = (v: number) => H - P - ((v - min) / span) * (H - 2 * P);
+  const line = points.map((p, i) => `${x(i)},${y(p.value)}`).join(' ');
+
+  return (
+    <div className="p-4 bg-slate-50 rounded-2xl space-y-2">
+      <div className="flex justify-between items-baseline">
+        <p className="text-[10px] font-black text-slate-500">{title}</p>
+        <p className="text-xs font-black text-slate-900">
+          {values[values.length - 1]} <span className="text-[9px] text-slate-400">{unit}</span>
+        </p>
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto">
+        {threshold !== undefined && (
+          <line x1={P} x2={W - P} y1={y(threshold)} y2={y(threshold)} stroke="#f43f5e" strokeDasharray="4 4" strokeWidth="1" />
+        )}
+        <polyline points={line} fill="none" stroke="#4f46e5" strokeWidth="2" strokeLinejoin="round" />
+        {points.map((p, i) => (
+          <circle key={i} cx={x(i)} cy={y(p.value)} r="3" fill="#4f46e5">
+            <title>{`${p.date.replace(/-/g, '/')}: ${p.value}${unit}`}</title>
+          </circle>
+        ))}
+      </svg>
+      <div className="flex justify-between text-[9px] font-bold text-slate-400">
+        <span>{points[0].date.replace(/-/g, '/')}</span>
+        <span>{points[points.length - 1].date.replace(/-/g, '/')}</span>
+      </div>
+    </div>
+  );
+};
+
 export default function App() {
   const [data, setData] = useState<AppData>({
     settings: { name: '...', dailyGoalDrinks: 2 },
@@ -275,6 +326,22 @@ export default function App() {
               <button onClick={() => setActiveTab('input')} className="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:underline">
                 ← ホーム
               </button>
+            </div>
+
+            {/* Trends (data is newest-first in state, so reverse for chronological charts) */}
+            <div className="bg-white rounded-[32px] p-6 border border-slate-200 shadow-sm space-y-3">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">推移</p>
+              <TrendChart
+                title="体重"
+                unit="kg"
+                points={[...data.weightRecords].reverse().map(r => ({ date: r.date, value: r.weight }))}
+              />
+              <TrendChart
+                title="γ-GTP"
+                unit="U/L"
+                threshold={50}
+                points={[...data.bloodTestRecords].reverse().map(r => ({ date: r.date, value: r.gammaGTP }))}
+              />
             </div>
 
             <div className="bg-white rounded-[32px] p-6 border border-slate-200 shadow-sm space-y-3">
